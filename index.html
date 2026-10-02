@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>Aventura Matemática</title>
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+html,body{margin:0;height:100%;overflow:hidden;background:#0d0d18;font-family:"Courier New",monospace;color:#fff;touch-action:none;overscroll-behavior:none}
+body{display:flex;align-items:center;justify-content:center}
+#g{position:relative;width:min(100vw,200vh);height:min(50vw,100vh);font-size:min(2vw,4vh);background:#000;image-rendering:pixelated}
+canvas{position:absolute;inset:0;width:100%;height:100%;image-rendering:pixelated}
+.s{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;text-align:center;background:rgba(15,10,40,.94);padding:.8em 2em;overflow-y:auto;gap:.5em}
+.s.on{display:flex}
+h1{margin:0;font-size:2.2em;color:#ffd84a;text-shadow:.1em .1em 0 #b3261e}
+h2{margin:0;font-size:1.5em;color:#ffd84a}h3{margin:.1em 0;font-size:1em;color:#ffd84a}
+p{margin:.2em 0;font-size:.95em;line-height:1.3;max-width:34em}
+button{font-family:inherit;font-size:1em;font-weight:bold;color:#fff;background:#3a5be0;border:.2em solid #fff;box-shadow:.2em .2em 0 #000;padding:.45em 1em;cursor:pointer;border-radius:0}
+button:active{transform:translate(.1em,.1em)}button:disabled{opacity:.45;cursor:default}
+.g{background:#2e9e3f}.r{background:#c0301f}.y{background:#c9a10f;color:#000}
+#map{display:flex;gap:.5em;flex-wrap:wrap;justify-content:center}
+#map button{width:8.5em;font-size:.8em}
+#h{position:absolute;left:0;right:0;top:0;display:none;justify-content:space-between;align-items:center;padding:.3em 3.4em .3em .6em;background:rgba(0,0,0,.55);font-size:.9em;z-index:2}
+#fsb{position:absolute;top:.3em;right:.5em;z-index:9;width:2.6em;height:2.2em;padding:0;font-size:.9em;background:#333}
+#h button{font-size:.8em;padding:.2em .6em}
+#ct{position:absolute;inset:0;pointer-events:none;z-index:3}
+#ct button{position:absolute;bottom:.6em;width:4.4em;height:3.6em;display:none;pointer-events:auto;opacity:.75;touch-action:none;font-size:1.1em;padding:0}
+#bl{left:.6em}#br{left:5.4em}#bu{right:.6em}#bd{right:5.4em}#bf{right:.6em;width:7em!important}
+#ct.dr #bu{left:.6em;right:auto}#ct.dr #bd{left:5.4em;right:auto}
+#q{z-index:5}
+.o{display:grid;grid-template-columns:1fr 1fr;gap:.4em;width:100%;max-width:42em}
+.o button{text-align:left;font-size:.85em;background:#243a9c}
+.o .ok{background:#2e9e3f}.o .no{background:#c0301f}
+#mg{display:flex;gap:.5em;align-items:center;justify-content:center;flex-wrap:wrap}
+#mg button{font-size:.75em}
+#hb{min-height:2.4em;font-size:.85em;color:#bfe;max-width:40em}
+.cred{border:.25em solid #ffd84a;background:#1b1240;box-shadow:.25em .25em 0 #000;padding:.35em 1.5em;margin:.2em 0}
+.cred p{font-size:1.1em;font-weight:bold;margin:0}
+#ck{display:grid;grid-template-columns:1fr 1fr;gap:0 1.5em;font-size:.8em;text-align:left}
+</style></head><body>
+<div id="g">
+<canvas id="c" width="800" height="400"></canvas>
+<button id="fsb" title="Pantalla completa" onclick="fs()">⛶</button>
+<div id="h"><span id="hs"></span><span id="hl"></span><span id="hb2"></span><button id="ex" class="y" style="display:none">🚪 SALIR DEL NIVEL</button></div>
+<div id="ct"><button id="bl" data-k="L">←</button><button id="br" data-k="R">→</button><button id="bu" data-k="U">↑</button><button id="bd" data-k="D">↓</button><button id="bf" class="r" data-k="F">🔥 DISPARAR</button></div>
+
+<div id="s-t" class="s on"><h1>🧮 AVENTURA MATEMÁTICA</h1><h3>El camino del cálculo</h3>
+<p>“El conocimiento del cálculo se ha perdido y diferentes territorios matemáticos están bloqueados. Recorre cada región, supera sus desafíos y derrota a sus guardianes para recuperar el conocimiento.”</p>
+<button class="g" onclick="newGame()">▶️ COMENZAR AVENTURA</button><button onclick="scr('s-i')">📖 INSTRUCCIONES</button></div>
+
+<div id="s-i" class="s"><h2>📖 Instrucciones</h2>
+<p><b>Parkour:</b> ← izquierda · → derecha · ↑ saltar</p>
+<p><b>Jefes normales:</b> ← → mover plataforma · ESPACIO / 🔥 disparar</p>
+<p><b>Jefe final:</b> ↑ subir nave · ↓ bajar nave · ESPACIO / 🔥 disparar</p>
+<p>Las preguntas otorgan puntos. Las respuestas incorrectas no bloquean el progreso. Cada jefe tiene 3 vidas. Completa cada nivel para avanzar. Los picos te devuelven al último punto seguro.</p>
+<button onclick="scr('s-t')">⬅ VOLVER</button></div>
+
+<div id="s-m" class="s"><h2>🗺️ Mapa</h2><div id="map"></div><p id="mm"></p></div>
+
+<div id="q" class="s"><h2>❓ DESAFÍO MATEMÁTICO</h2><p id="qt" style="font-size:1.1em"></p>
+<div class="o" id="op"></div>
+<div id="mg"><canvas id="mc" width="40" height="40" style="position:static;width:2.6em;height:2.6em"></canvas><span>Mago del Cálculo:</span><button id="bp" onclick="help(0)">💡 PEDIR PISTA</button><button id="be" style="display:none" onclick="help(1)">📖 VER EXPLICACIÓN</button></div>
+<div id="hb"></div><div id="rs" style="display:none"><p id="rt" style="font-size:.95em"></p><button class="g" onclick="qNext()">CONTINUAR ▶</button></div></div>
+
+<div id="s-e" class="s"><h2>🏆 AVENTURA COMPLETADA</h2><p>🐉 Dragón derrotado.</p>
+<h3>PUNTUACIÓN FINAL: <span id="fs"></span>/100</h3><h3 id="fr"></h3><p id="ft"></p>
+<div id="ck"></div>
+<div class="cred"><h3>🎓 CRÉDITOS</h3><p>Santiago Ramírez Páez</p></div>
+<div><button class="g" onclick="newGame()">🔄 VOLVER A JUGAR</button> <button onclick="mapa()">🗺️ VER MAPA</button> <button class="y" onclick="startLevel(0)">📚 REPASAR</button></div></div>
+</div>
+<script>
+const $=id=>document.getElementById(id),C=$('c'),X=C.getContext('2d'),K={};
+const LV=[['🌲 Bosque de las Funciones','#2e8b3d','#1f5e2a','#7ddc6a','#3fd15a'],['🌀 Portal de las Transformaciones','#d9822b','#8a4a12','#ffc078','#ff9b2f'],['⛰️ Montaña de Potencias y Logaritmos','#7b3fb0','#4a2270','#c79bf0','#a45be0'],['🏛️ Templo de la Composición','#2a6fdb','#173f80','#8fbaff','#3c8cff'],['🌋 Montaña de la Trigonometría','#a3271a','#5e130b','#ff8a5c','#c0301f']];
+const BN=['Guardián de las Funciones','Guardián de las Transformaciones','Guardián de Potencias y Logaritmos','Guardián de la Composición','Guardián de la Trigonometría'];
+// [pregunta, correcta, distractor1, distractor2, distractor3, explicación, pista]
+const Q=[[
+["Si f(x)=2x²−3, ¿cuánto vale f(2)?","5","1","8","11","f(2)=2·4−3=5.","Sustituye x por 2 y opera."],
+["Dominio de f(x)=√(x−4)","x ≥ 4","x ≤ 4","x > 0","Todos los reales","La raíz exige x−4 ≥ 0, es decir x ≥ 4.","El radicando no puede ser negativo."],
+["Dominio de f(x)=1/(x−3)","x ≠ 3","x ≠ 0","x > 3","x ≠ −3","El denominador no puede ser 0: x−3≠0.","¿Qué valor anula el denominador?"],
+["Rango de f(x)=x²+1","y ≥ 1","y ≥ 0","Todos los reales","y ≤ 1","x² ≥ 0, entonces x²+1 ≥ 1.","El menor valor de x² es 0."],
+["Función inversa de f(x)=2x+6","(x−6)/2","2x−6","(x+6)/2","x/2+6","Despeja x en y=2x+6: x=(y−6)/2.","Intercambia x e y y despeja y."],
+["Decir que el límite de f(x) cuando x→2 es L significa que…","f(x) se acerca a L cuando x se acerca a 2","f(2) siempre vale L","x es igual a L","f(x) crece sin cota","El límite describe hacia dónde se aproxima f(x), no exige que f(2)=L.","Piensa en aproximación, no en evaluación."],
+["Cuando una recta secante se aproxima cada vez más a una tangente en un punto, ¿a qué se aproxima su pendiente?","A la pendiente de la recta tangente","A cero","A la pendiente de la curva en x=0","Al infinito","Al acercarse los dos puntos de la secante, su pendiente tiende a la de la tangente.","La secante se “convierte” en tangente."],
+["Pendiente de la secante a y=x² entre x=1 y x=3","4","8","2","5","(9−1)/(3−1)=4.","Usa (y₂−y₁)/(x₂−x₁)."],
+["La pendiente de la secante entre x=a y x=a+h es…","[f(a+h)−f(a)]/h","f(a+h)+f(a)","f(a)/h","[f(a+h)−f(a)]·h","Cambio en y dividido entre cambio en x, que es h.","Es un cociente de cambios."],
+["Intuitivamente, ¿a qué se aproxima x+2 cuando x se acerca a 3?","5","3","2","No existe","Al acercarse x a 3, x+2 se acerca a 5.","Sustituye el valor al que se acerca x."]
+],[
+["La gráfica de y=f(x)+3 se obtiene…","subiendo 3 unidades la de f","bajando 3 unidades","moviéndola 3 a la derecha","moviéndola 3 a la izquierda","Sumar fuera de f desplaza verticalmente hacia arriba.","Sumar fuera afecta a y."],
+["La gráfica de y=f(x−2) se obtiene…","moviendo 2 unidades a la derecha","moviendo 2 a la izquierda","subiendo 2","bajando 2","x−2 desplaza a la derecha (contraintuitivo, pero cierto).","El cambio dentro afecta a x."],
+["y=−f(x) es una reflexión respecto…","al eje x","al eje y","al origen","a la recta y=x","Cambiar el signo de y refleja sobre el eje x.","Se invierte el signo de las alturas."],
+["y=f(−x) es una reflexión respecto…","al eje y","al eje x","al origen","a la recta y=x","Cambiar x por −x refleja sobre el eje y.","Se invierte el signo de x."],
+["Vértice de y=(x+1)²−4","(−1,−4)","(1,−4)","(−1,4)","(1,4)","Forma (x−h)²+k con h=−1, k=−4.","Compara con (x−h)²+k."],
+["y=2f(x) produce…","un estiramiento vertical de factor 2","un estiramiento horizontal de factor 2","subir 2 unidades","mover 2 a la derecha","Multiplicar las alturas por 2 estira verticalmente.","Multiplicas los valores de y."],
+["y=f(x+5)−1 desplaza la gráfica de f…","5 a la izquierda y 1 abajo","5 a la derecha y 1 abajo","5 a la izquierda y 1 arriba","5 a la derecha y 1 arriba","x+5 va a la izquierda; −1 baja.","Interior: opuesto. Exterior: directo."],
+["Reflexión de y=|x| respecto al eje x","y=−|x|","y=|−x|","y=|x|−1","y=|x−1|","Reflejar sobre el eje x es −f(x). Además |−x|=|x|.","Cambia el signo de toda la función."],
+["Si (2,5) está en f, ¿qué punto está en y=f(x)+1?","(2,6)","(3,5)","(2,4)","(1,5)","Suma 1 a la altura: (2,6).","Solo cambia la coordenada y."],
+["Si (2,5) está en f, ¿qué punto está en y=f(x−3)?","(5,5)","(−1,5)","(2,8)","(2,2)","Se desplaza 3 a la derecha: (5,5).","Solo cambia la coordenada x."]
+],[
+["x³·x⁴ =","x⁷","x¹²","2x⁷","x^(3/4)","En un producto de bases iguales se suman exponentes.","Suma los exponentes."],
+["x⁸ / x³ =","x⁵","x¹¹","x^(8/3)","x²⁴","En un cociente se restan exponentes.","Resta los exponentes."],
+["(x²)³ =","x⁶","x⁵","x⁸","3x²","En potencia de potencia se multiplican exponentes.","Multiplica 2 por 3."],
+["2⁻³ =","1/8","−8","−6","1/6","a⁻ⁿ=1/aⁿ, luego 2⁻³=1/8.","Un exponente negativo invierte."],
+["Si x≠0, (5x)⁰ =","1","0","5","5x","Toda base distinta de 0 elevada a 0 es 1.","Cualquier cosa (no nula)⁰."],
+["log₂ 8 =","3","4","2","16","2³=8.","¿A qué potencia elevas 2 para obtener 8?"],
+["log(a·b) =","log a + log b","a·log b","log a · log b","log a − log b","El logaritmo de un producto es la suma.","Producto → suma."],
+["log(a/b) =","log a − log b","log a / log b","log a + log b","log(a−b)","El logaritmo de un cociente es la resta.","Cociente → resta."],
+["log(xⁿ) =","n·log x","(log x)ⁿ","log(nx)","x·log n","El exponente baja multiplicando.","El exponente sale delante."],
+["log_b(y)=x equivale a…","bˣ=y","xᵇ=y","yˣ=b","bʸ=x","El logaritmo es el exponente: bˣ=y.","Logaritmo = exponente."]
+],[
+["Si f(x)=2x+1 y g(x)=x², ¿cuánto vale f(g(3))?","19","49","7","21","g(3)=9 y f(9)=19.","Calcula primero g(3)."],
+["Si f(x)=2x+1 y g(x)=x², ¿cuánto vale g(f(3))?","49","19","14","13","f(3)=7 y g(7)=49.","Calcula primero f(3)."],
+["Con f(x)=2x+1 y g(x)=x², f(g(x)) =","2x²+1","(2x+1)²","2x²+2x","x²+2x+1","f(g(x))=2·x²+1.","Reemplaza x en f por g(x)."],
+["Con f(x)=2x+1 y g(x)=x², g(f(x)) =","4x²+4x+1","2x²+1","2x²","4x²+1","(2x+1)²=4x²+4x+1.","Eleva al cuadrado 2x+1."],
+["En general, f(g(x)) y g(f(x)) …","generalmente no son iguales","siempre son iguales","son iguales si son polinomios","nunca pueden ser iguales","El orden importa; solo en casos particulares coinciden.","Compara los dos ejemplos anteriores."],
+["Si f(x)=√x y g(x)=x+5, f(g(x)) =","√(x+5)","√x+5","5√x","x+√5","Se sustituye g(x) dentro de la raíz.","g va dentro de f."],
+["(f∘g)(x) significa aplicar…","primero g y luego f","primero f y luego g","f multiplicada por g","f dividida entre g","f∘g = f(g(x)): g actúa primero.","Lee desde adentro hacia afuera."],
+["Si f(x)=x+3 y g(x)=x−3, f(g(x)) =","x","2x","x+6","x−6","(x−3)+3=x.","Sustituye y simplifica."],
+["Si f(x)=x² y g(x)=x+1, (f∘g)(2) =","9","5","7","25","g(2)=3 y f(3)=9.","Evalúa g y luego f."],
+["Si f(x)=3x y g(x)=x/3, f(g(x)) =","x","9x","x/9","3x","3·(x/3)=x.","Sustituye g(x) en f."]
+],[
+["En un triángulo rectángulo, sen θ =","opuesto / hipotenusa","adyacente / hipotenusa","opuesto / adyacente","hipotenusa / opuesto","SOH: seno = opuesto/hipotenusa.","SOH."],
+["cos θ =","adyacente / hipotenusa","opuesto / hipotenusa","opuesto / adyacente","adyacente / opuesto","CAH: coseno = adyacente/hipotenusa.","CAH."],
+["tan θ =","opuesto / adyacente","adyacente / opuesto","opuesto / hipotenusa","adyacente / hipotenusa","TOA: tangente = opuesto/adyacente.","TOA."],
+["Triángulo 3-4-5, θ opuesto al lado 3: sen θ =","3/5","4/5","3/4","5/3","Opuesto 3, hipotenusa 5.","Hipotenusa = lado más largo."],
+["Mismo triángulo 3-4-5: cos θ =","4/5","3/5","4/3","5/4","Adyacente 4, hipotenusa 5.","Adyacente = el lado que toca a θ."],
+["Mismo triángulo 3-4-5: tan θ =","3/4","4/3","3/5","4/5","Opuesto 3, adyacente 4.","No usa la hipotenusa."],
+["sen 30° =","1/2","√3/2","1","√2/2","Valor notable: sen 30° = 1/2.","Triángulo 30-60-90."],
+["tan 45° =","1","0","√3","1/2","En 45° opuesto y adyacente son iguales.","Catetos iguales."],
+["Una escalera de 10 m forma 30° con el suelo. ¿Qué altura alcanza en la pared?","5 m","8,66 m","10 m","20 m","Altura = 10·sen 30° = 5.","La altura es el cateto opuesto."],
+["sen²θ + cos²θ =","1","0","2","sen 2θ","Identidad pitagórica fundamental.","Teorema de Pitágoras con hipotenusa 1."]
+]];
+const FQ=[
+["Si f(x)=3x−2, ¿cuánto vale f⁻¹(7)?","3","19","5/3","1","f⁻¹(x)=(x+2)/3, entonces f⁻¹(7)=3.","Halla primero la inversa."],
+["Si log₂ x = 5, ¿cuánto vale log₂(x/4)?","3","5/4","1","7","log₂(x/4)=5−log₂4=5−2=3.","Cociente → resta de logaritmos."],
+["Si f(x)=2x y g(x)=sen x, ¿cuánto vale f(g(π/6))?","1","√3/2","1/2","2","g(π/6)=1/2 y f(1/2)=1.","Evalúa primero el seno."]];
+const shuf=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[a[i],a[j]]=[a[j],a[i]]}return a};
+let lastPos=-1;
+function prep(a,strict){let pos;do pos=Math.random()*4|0;while(pos==lastPos&&(strict||Math.random()<.85));lastPos=pos;const w=shuf([a[2],a[3],a[4]]);let k=0;const o=[];for(let i=0;i<4;i++)o.push(i==pos?a[1]:w[k++]);return{q:a[0],o,c:pos,e:a[5],h:a[6]}}
+// ---- estado
+let S,mode='t',P,Sp,Gt,pl,cam,cp,lv,W,B,Bu=[],D,Fq=0,qc,qcb,qpts,replay=false,parts=[],tm=0,fc=0,imp=0,dhp=3,shot=0,stun=0,fbs=[],dt2=0,worldW=0,lastT=0,curQ=0;
+function newGame(){S={score:0,done:[0,0,0,0,0],sel:Q.map(l=>shuf([0,1,2,3,4,5,6,7,8,9]).slice(0,5)),fin:0,dr:0};lastPos=-1;mapa()}
+function scr(id){document.querySelectorAll('.s').forEach(e=>e.classList.remove('on'));if(id)$(id).classList.add('on')}
+function ctl(s,dr){const c=$('ct');c.className=dr?'dr':'';for(const [k,id] of [['l','bl'],['r','br'],['u','bu'],['d','bd'],['f','bf']])$(id).style.display=s.includes(k)?'block':'none'}
+function mapa(){mode='m';ctl('');$('h').style.display='none';scr('s-m');const m=$('map');m.innerHTML='';const nx=S.done.indexOf(0);
+ for(let i=0;i<6;i++){const b=document.createElement('button');const dn=i<5?S.done[i]:S.dr;const op=i<5?(S.done[i]||nx==i||nx<0):S.done.every(x=>x);
+  b.textContent=(dn?'✅ ':op?'▶ ':'🔒 ')+(i<5?'Nivel '+(i+1):'🐉 Dragón')+(i<5?'\n'+LV[i][0].slice(3):'\nTemplo del Cálculo');b.style.whiteSpace='pre-line';b.className=dn?'g':op?'':'r';b.disabled=!op;b.onclick=()=>i<5?startLevel(i):startDragon();m.appendChild(b);if(i<5){const a=document.createElement('span');a.textContent='→';m.appendChild(a)}}
+ $('mm').textContent='PUNTUACIÓN: '+sc()+'/100 · Completa cada nivel para desbloquear el siguiente.'}
+// ---- Parkour
+function startLevel(n){lv=n;replay=!!S.done[n];const N=10+n*2,gs=[];for(let i=0;i<5;i++)gs.push(Math.floor(N*(i+1)/5)-1);
+ P=[];Sp=[];Gt=[];let x=0;const add=(x,y,w,mv)=>{const m={x,y,w,h:14,bx:x,by:y,mv:mv||0,ph:Math.random()*6,sp:.02+n*.002,r:0,dx:0,dy:0};P.push(m);return m};
+ add(0,300,220);x=220;
+ for(let j=0;j<N;j++){const g=gs.includes(j),k=g?0:(j%4);
+  if(k==1){const gap=170,m=add(x+10,290,60,1);m.r=(gap-80)/2;m.bx=x+10;x+=gap;const p=add(x,300,180);}
+  else if(k==3){const gap=100;const m=add(x+15,285,70,2);m.r=35;m.by=265;x+=gap;add(x,300,180)}
+  else{const gap=50+n*7;x+=gap;const y=(k==0&&j%2)?275:300,w=g?200:190;add(x,y,w);if(k==2)Sp.push({x:x+w/2-12,y:y-16,w:24,h:16});if(g)Gt.push({x:x+w/2,y:y,done:0});x+=w}}
+ worldW=x+150;W={x:40,y:250,w:16,h:26,vx:0,vy:0,on:0,rd:null,dead:0,dir:1};cp={x:40,y:274};cam=0;parts=[];
+ Fq=0;curQ=0;mode='p';scr(null);ctl('lru');hud()}
+const sc=()=>Math.max(0,Math.min(100,Math.round(S.score/50)));
+function hud(){$('h').style.display='flex';$('hs').textContent='PUNTUACIÓN: '+sc()+'/100';$('hl').textContent=mode=='d'?'🐉 Templo del Cálculo':'Nivel '+(lv+1)+' · '+LV[lv][0];$('ex').style.display=(replay&&mode!='d')?'block':'none';
+ $('hb2').textContent=mode=='b'?BN[lv].split(' ')[0]+' '+'❤️'.repeat(B.hp)+'🖤'.repeat(3-B.hp):mode=='d'?'🐉 '+'❤️'.repeat(dhp)+'🖤'.repeat(3-dhp)+' '+imp+'/10':'Pregunta '+Math.min(curQ+1,5)+'/5'}
+$('ex').onclick=mapa;
+function die(){if(W.dead>0)return;W.dead=40;for(let i=0;i<14;i++)parts.push({x:W.x+8,y:W.y+13,vx:(Math.random()-.5)*6,vy:-Math.random()*6,l:40})}
+function updP(f){
+ for(const m of P)if(m.mv){m.ph+=m.sp*f*3;const ox=m.x,oy=m.y;if(m.mv==1)m.x=m.bx+(Math.sin(m.ph)+1)*m.r;else m.y=m.by+(Math.sin(m.ph)+1)*m.r;m.dx=m.x-ox;m.dy=m.y-oy}
+ const p=W;
+ if(p.dead>0){p.dead-=f;if(p.dead<=0){p.x=cp.x;p.y=cp.y;p.vy=0;p.rd=null}return}
+ if(p.rd){p.x+=p.rd.dx;p.y=p.rd.y-p.h}
+ p.vx=((K.R?1:0)-(K.L?1:0))*3.2;if(p.vx)p.dir=p.vx>0?1:-1;
+ p.x=Math.max(0,p.x+p.vx*f);const pb=p.y+p.h;
+ if(K.U&&p.on)p.vy=-11.5;
+ p.on=0;p.rd=null;p.vy+=.6*f;p.y+=p.vy*f;
+ if(p.vy>=0)for(const m of P)if(p.x+p.w>m.x&&p.x<m.x+m.w&&p.y+p.h>=m.y&&pb<=m.y+8+Math.max(0,m.dy)){p.y=m.y-p.h;p.vy=0;p.on=1;if(m.mv)p.rd=m;else cp={x:m.x+12,y:m.y-p.h};break}
+ for(const s of Sp)if(p.x+p.w>s.x+3&&p.x<s.x+s.w-3&&p.y+p.h>s.y+4&&p.y<s.y+s.h)die();
+ if(p.y>440)die();
+ for(const g of Gt)if(!g.done&&p.x>g.x&&p.on){g.done=1;curQ=Gt.indexOf(g);askLvl(curQ);break}
+ cam=Math.max(0,Math.min(worldW-800,p.x-300))}
+function askLvl(i){ctl('');const d=Q[lv][S.sel[lv][i]];ask(prep(d),100,()=>{curQ=i+1;if(i==4)startBoss();else{mode='p';ctl('lru');hud()}})}
+// ---- Preguntas + Mago
+function ask(q,pts,cb){mode='q';qc=q;qcb=cb;qpts=pts;ctl('');$('qt').textContent=q.q;const o=$('op');o.innerHTML='';q.o.forEach((t,i)=>{const b=document.createElement('button');b.textContent='ABCD'[i]+') '+t;b.onclick=()=>ans(i);o.appendChild(b)});$('hb').textContent='';$('rs').style.display='none';$('bp').style.display='';$('be').style.display='none';q.done=0;scr('q')}
+function ans(i){if(qc.done)return;qc.done=1;const ok=i==qc.c;const bs=$('op').children;bs[qc.c].classList.add('ok');if(!ok)bs[i].classList.add('no');
+ const pts=ok&&!replay?qpts:0;if(pts)S.score+=pts;$('rt').textContent=(ok?'✅ ¡Correcto! ':'❌ Incorrecto. La respuesta era '+'ABCD'[qc.c]+'. ')+'Puntos obtenidos: +'+pts/50+'/100';$('rs').style.display='block';$('hb').textContent='';$('bp').style.display='none';$('be').style.display=''}
+function help(t){$('hb').textContent=(t?'📖 ':'💡 ')+(t?qc.e:qc.h)}
+function qNext(){scr(null);hud();qcb()}
+// ---- Jefe normal
+function startBoss(){B={x:340,y:55,w:50,h:44,dir:1,hp:3,t:0,inv:0};pl={x:370,w:64,y:310};Bu=[];shot=0;mode='b';ctl('lrf');hud()}
+function updB(f,dt){B.t+=dt;B.x+=B.dir*(1.6+lv*.25)*f;if(B.x<20||B.x>730)B.dir*=-1;B.inv=Math.max(0,B.inv-dt);
+ pl.x=Math.max(0,Math.min(736,pl.x+((K.R?1:0)-(K.L?1:0))*4.5*f));shot-=dt;if(K.F&&shot<=0){Bu.push({x:pl.x+pl.w/2-3,y:pl.y-10});shot=.35}
+ B.sh=(B.t%15)<5;
+ for(const b of Bu){b.y-=8*f;if(b.y<B.y+B.h&&b.y>B.y-8&&b.x>B.x&&b.x<B.x+B.w){b.y=-99;if(B.sh)B.flash=.2;else if(B.inv<=0){B.hp--;B.inv=.5;hud()}}}
+ B.flash=Math.max(0,(B.flash||0)-dt);Bu=Bu.filter(b=>b.y>-20);
+ if(B.hp<=0){if(!replay){S.score+=200;}S.done[lv]=1;mode='m2';ctl('');setTimeout(()=>{mapa()},900)}}
+// ---- Dragón
+function startDragon(){lv=0;replay=false;imp=0;dhp=3;Fq=0;D={y:100,t:0,ft:0};W={y:180};Bu=[];fbs=[];stun=0;mode='d';scr(null);ctl('udf',1);hud()}
+function updD(f,dt){D.t+=dt;D.y=110+Math.sin(D.t*.9)*40;stun=Math.max(0,stun-dt);shot-=dt;
+ W.y=Math.max(40,Math.min(300,W.y+((K.D?1:0)-(K.U?1:0))*4*f));
+ if(K.F&&shot<=0&&!stun){Bu.push({x:110,y:W.y+5});shot=.28}
+ D.ft-=dt;if((D.t%15)<5&&D.ft<=0){fbs.push({x:590,y:D.y+96});D.ft=1.1}
+ for(const b of Bu){b.x+=10*f;if(b.x>600&&b.y>D.y&&b.y<D.y+190){b.x=999;imp++;hud();if(imp>=10){imp=0;askFinal()}}}
+ Bu=Bu.filter(b=>b.x<800);
+ for(const b of fbs){b.x-=4.2*f;if(b.x<128&&b.x>70&&Math.abs(b.y-(W.y+8))<16&&!stun){stun=.8;b.x=-99}}fbs=fbs.filter(b=>b.x>-20)}
+function askFinal(){mode='q';ctl('');Bu=[];fbs=[];ask(prep(FQ[Fq],1),500,()=>{dhp--;Fq++;imp=0;if(dhp<=0)end();else{mode='d';ctl('udf',1);hud()}})}
+function end(){mode='e';ctl('');$('h').style.display='none';S.dr=1;const s=sc();$('fs').textContent=s;
+ const R=s>=94?['👑 LEYENDA DEL CÁLCULO','Has completado la aventura con un dominio excepcional de los desafíos matemáticos. ¡El Dragón Rojo ha sido derrotado y el conocimiento del cálculo ha sido restaurado!']:s>=80?['🧙 MAESTRO DEL CÁLCULO','Has demostrado un dominio sólido de los conceptos y has superado los desafíos más difíciles.']:s>=60?['⚔️ GUERRERO DEL CÁLCULO','Has superado los territorios y demostrado un buen manejo de los conceptos trabajados durante la aventura.']:s>=30?['📚 EXPLORADOR MATEMÁTICO','Has demostrado conocimientos importantes de cálculo y has conseguido superar varios de los desafíos de la aventura.']:['🌱 APRENDIZ DEL CÁLCULO','Has completado la aventura, pero todavía tienes conceptos que puedes reforzar. Explora nuevamente los niveles y prueba con nuevas preguntas.'];
+ $('fr').textContent=R[0];$('ft').textContent=R[1];$('ck').innerHTML=[...LV.map(l=>l[0].slice(3)),'Dragón Rojo'].map(n=>'<div>☑ '+n+'</div>').join('');scr('s-e')}
+// ---- Dibujo
+const R=(x,y,w,h,c)=>{X.fillStyle=c;X.fillRect(x|0,y|0,w,h)};
+function hero(x,y,d){X.save();X.translate(x+8,y);X.scale(d,1);R(-6,-2,12,5,'#d33');R(-5,3,10,8,'#f2c9a0');R(1,5,2,2,'#000');R(-6,11,12,10,'#2a6fdb');R(-4,12,8,3,'#ffd84a');R(-5,21,4,5,'#5a3a1a');R(1,21,4,5,'#5a3a1a');R(6,12,3,8,'#ccc');X.restore()}
+function dragon(x,y){R(x+150,y+140,40,12,'#8a0f16');R(x+185,y+130,10,12,'#8a0f16');R(x+50,y+80,110,90,'#c0141c');R(x+50,y+120,50,50,'#f0a040');R(x+10,y+60,60,50,'#d01a22');R(x,y+82,26,28,'#d01a22');R(x,y+100,26,4,'#2a0507');R(x+4,y+96,4,4,'#fff');R(x+14,y+96,4,4,'#fff');R(x+6,y+86,4,4,'#000');R(x+34,y+68,12,9,'#ffe14a');R(x+34,y+70,4,5,'#000');R(x+40,y+44,8,20,'#333');R(x+56,y+46,8,16,'#333');R(x+85,y+50,70,40,'#7a0a10');R(x+100,y+30,50,20,'#7a0a10');R(x+115,y+14,30,16,'#7a0a10');R(x+90,y+88,50,8,'#5a070c');R(x+60,y+170,16,24,'#8a0f16');R(x+120,y+170,16,24,'#8a0f16');R(x+56,y+192,24,6,'#222');R(x+116,y+192,24,6,'#222')}
+function draw(){const L=LV[lv]||LV[0];
+ if(mode=='d'||(mode=='q'&&D&&W&&W.dead===undefined&&Fq>=0&&D.t!==undefined&&$('ct').className=='dr'&&false)){R(0,0,800,400,'#1a0a14');for(let i=0;i<30;i++)R((i*97+fc)%800,(i*53)%380,3,3,'#a55');R(0,340,800,60,'#3a0f14');R(0,0,800,20,'#3a0f14');
+  X.font='11px monospace';R(60,W.y,44,22,stun>0&&fc%6<3?'#f66':'#8ecbff');R(90,W.y+6,20,10,'#fff');R(56,W.y+4,8,14,'#f80');dragon(590,D.y);
+  for(const b of Bu)R(b.x,b.y+4,14,4,'#ffe14a');for(const b of fbs){R(b.x-8,b.y-8,16,16,'#ff7a00');R(b.x-4,b.y-4,8,8,'#ffe14a')}
+  X.fillStyle='#fff';X.font='bold 14px monospace';X.fillText('🎯 '+imp+' / 10   Dragón: '+dhp+' vidas',300,44);X.fillText((D.t%15)<5?'🔥 EL DRAGÓN ATACA':'😴 el dragón descansa',300,64);return}
+ if(mode=='b'||(mode=='q'&&B&&Gt&&Gt.length&&curQ>=5)||mode=='m2'){R(0,0,800,400,L[1]);for(let i=0;i<8;i++)R(i*110+20,60+(i%3)*40,40,12,L[3]+'55');R(0,340,800,60,L[2]);
+  R(pl.x,pl.y,pl.w,10,'#ddd');R(pl.x+pl.w/2-5,pl.y-8,10,8,L[3]);
+  const bx=B.x,by=B.y;R(bx,by,B.w,B.h,B.flash>0?'#fff':L[4]);R(bx+6,by-8,8,10,'#333');R(bx+B.w-14,by-8,8,10,'#333');R(bx+10,by+12,10,10,'#fff');R(bx+B.w-20,by+12,10,10,'#fff');R(bx+13,by+15,4,5,'#000');R(bx+B.w-17,by+15,4,5,'#000');R(bx+12,by+32,B.w-24,5,'#300');
+  if(B.sh){X.strokeStyle='#5ff';X.lineWidth=3;X.beginPath();X.arc(bx+B.w/2,by+B.h/2,42,0,7);X.stroke();X.fillStyle='rgba(90,255,255,.18)';X.fill();X.fillStyle='#5ff';X.font='bold 13px monospace';X.fillText('🛡️ BARRERA ACTIVA',bx-30,by-24)}else{X.fillStyle='#ffd84a';X.font='12px monospace';X.fillText('⚔️ ¡VULNERABLE!',bx-10,by-14)}
+  for(const b of Bu)R(b.x,b.y,6,12,'#ffe14a');return}
+ R(0,0,800,400,L[1]);for(let i=0;i<8;i++)R(((i*230-cam*.3)%1000+1000)%1000-100,50+(i%3)*45,70,16,L[3]+'55');
+ X.save();X.translate(-cam,0);for(const m of P){R(m.x,m.y,m.w,m.h,L[2]);R(m.x,m.y,m.w,4,L[3]);if(m.mv)R(m.x+m.w/2-4,m.y+5,8,4,'#ffd84a')}
+ X.fillStyle='#ddd';for(const s of Sp)for(let i=0;i<3;i++){X.beginPath();X.moveTo(s.x+i*8,s.y+16);X.lineTo(s.x+i*8+4,s.y);X.lineTo(s.x+i*8+8,s.y+16);X.fill()}
+ for(const g of Gt){R(g.x,g.y-42,3,42,'#ddd');R(g.x+3,g.y-42,20,14,g.done?'#4d4':'#ffd84a')}
+ if(W.dead<=0||!W.dead)hero(W.x,W.y,W.dir);for(const q of parts)R(q.x,q.y,4,4,'#f44');X.restore()}
+function loop(t){const dt=Math.min(.05,(t-lastT)/1000||.016);lastT=t;const f=dt*60;fc++;
+ for(const q of parts){q.x+=q.vx;q.y+=q.vy;q.vy+=.3;q.l--}parts=parts.filter(q=>q.l>0);
+ if(mode=='p')updP(f);else if(mode=='b')updB(f,dt);else if(mode=='d')updD(f,dt);
+ if(mode!='t'&&mode!='m'&&mode!='e'&&mode!='q')draw();else if(mode=='q'&&$('s-e').className.indexOf('on')<0)qDraw();else X.clearRect(0,0,800,400);
+ requestAnimationFrame(loop)}
+function qDraw(){}
+// ---- Mago pixel-art
+(function(){const c=$('mc').getContext('2d'),r=(x,y,w,h,k)=>{c.fillStyle=k;c.fillRect(x,y,w,h)};r(14,2,12,4,'#6a2fb8');r(10,6,20,4,'#6a2fb8');r(6,10,28,3,'#4a1f88');r(12,13,16,10,'#f2c9a0');r(15,16,3,3,'#000');r(22,16,3,3,'#000');r(12,22,16,8,'#fff');r(8,28,24,10,'#2a4fd8');r(18,8,4,4,'#ffd84a')})();
+// ---- Pantalla completa
+function fs(){const d=document,e=d.documentElement,inFs=d.fullscreenElement||d.webkitFullscreenElement;
+ const req=e.requestFullscreen||e.webkitRequestFullscreen,ex=d.exitFullscreen||d.webkitExitFullscreen;
+ if(inFs){ex&&ex.call(d);return}
+ if(req){try{const r=req.call(e);if(r&&r.catch)r.catch(()=>alert('Tu navegador o editor bloqueó la pantalla completa. Abre la vista previa en una pestaña nueva e inténtalo de nuevo.'))}catch(x){}}
+ else alert('En iPhone: toca Compartir y elige "Añadir a pantalla de inicio"; al abrir el juego desde ese icono se verá a pantalla completa.')}
+// ---- Controles
+const km={ArrowLeft:'L',ArrowRight:'R',ArrowUp:'U',ArrowDown:'D',' ':'F',a:'L',d:'R',w:'U',s:'D'};
+addEventListener('keydown',e=>{const k=km[e.key];if(k){K[k]=1;e.preventDefault()}});addEventListener('keyup',e=>{const k=km[e.key];if(k){K[k]=0;e.preventDefault()}});
+document.querySelectorAll('#ct button').forEach(b=>{const k=b.dataset.k,on=e=>{e.preventDefault();K[k]=1},off=e=>{e.preventDefault();K[k]=0};
+ b.addEventListener('pointerdown',on);b.addEventListener('pointerup',off);b.addEventListener('pointerleave',off);b.addEventListener('pointercancel',off);b.addEventListener('touchstart',on,{passive:false});b.addEventListener('touchend',off,{passive:false});b.addEventListener('contextmenu',e=>e.preventDefault())});
+document.addEventListener('contextmenu',e=>e.preventDefault());document.addEventListener('gesturestart',e=>e.preventDefault());document.addEventListener('touchmove',e=>e.preventDefault(),{passive:false});
+requestAnimationFrame(loop);
+</script></body></html>
